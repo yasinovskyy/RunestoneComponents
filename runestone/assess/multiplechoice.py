@@ -174,6 +174,7 @@ class MChoice(Assessment):
             """
 
         TEMPLATE_START = '''
+            <div class="runestone">
             <ul data-component="multiplechoice" data-multipleanswers="%(multipleAnswers)s" %(random)s id="%(divid)s">
             '''
 
@@ -185,6 +186,7 @@ class MChoice(Assessment):
         TEMPLATE_END = '''
 
             </ul>
+            </div>
             '''
         addQuestionToDB(self)
         super(MChoice,self).run()
