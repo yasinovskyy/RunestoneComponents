@@ -8,16 +8,18 @@ from .datafile import *
 from .disqus import *
 from .dragndrop import *
 from .fitb import *
-from .livecode import *
+from .matrixeq import *
 from .meta import *
 from .parsons import *
 from .poll import *
 from .reveal import *
 from .shortanswer import *
+from .showeval import *
 from .tabbedStuff import *
 from .usageAssignment import *
 from .video import *
-from .server.chapternames import populateChapterInfo
+from .webgldemo import *
+
 
 import os, sys
 
@@ -27,7 +29,7 @@ def runestone_static_dirs():
     module_static_js = ['%s/js' % os.path.join(basedir,x) for x in module_paths if os.path.exists('%s/js' % os.path.join(basedir,x))]
     module_static_css = ['%s/css' % os.path.join(basedir,x) for x in module_paths if os.path.exists('%s/css' % os.path.join(basedir,x))]
     module_static_image = ['%s/images' % os.path.join(basedir,x) for x in module_paths if os.path.exists('%s/images' % os.path.join(basedir,x))]
-    module_static_bootstrap = ['%s/bootstrap' % os.path.join(basedir,x) for x in module_paths if os.path.exists('%s/bootstrap' % os.path.join(basedir,x))]        
+    module_static_bootstrap = ['%s/bootstrap' % os.path.join(basedir,x) for x in module_paths if os.path.exists('%s/bootstrap' % os.path.join(basedir,x))]
 
     return module_static_js + module_static_css + module_static_image + module_static_bootstrap
 
@@ -37,7 +39,6 @@ def runestone_extensions():
     module_paths = [ x for x in os.listdir(basedir) if os.path.isdir(os.path.join(basedir,x))]
     modules = [ 'runestone.{}'.format(x) for x in module_paths if os.path.exists('{}/__init__.py'.format(os.path.join(basedir,x)))]
     modules.remove('runestone.server')
-    modules.remove('runestone.common')
     return modules
 
 from paver.easy import task, cmdopts, sh
@@ -79,30 +80,16 @@ def build(options):
     print('Building into ', options.build.outdir)
     rc = paverutils.run_sphinx(options,'build')
 
-
-    try:
-        if os.path.exists(os.path.join(options.build.sourcedir,'toc.rst')):
-            idxfile = os.path.join(options.build.sourcedir,'toc.rst')
-        else:
-            idxfile = os.path.join(options.build.sourcedir,'index.rst')
-
-        populateChapterInfo(options.build.project_name, idxfile)
-        print('Creating Chapter Information for {}'.format(idxfile))
-    except ImportError as e:
-        print('Chapter information database population skipped, This is OK for a standalone build.',e)
-    except Exception as e:
-        print('Chapter Information Creation Failed with', e)
-
-    if rc == 0:
+    if rc == 0 or rc is None:
         print("Done, {} build successful".format(options.build.project_name))
     else:
-        print("Error in building {}".format(options.build.project_name) )
+        print("Error in building {} code {}".format(options.build.project_name, rc))
 
+    return rc
 
 cmap = {'activecode': ActiveCode,
         'mchoice': MChoice,
         'fillintheblank': FillInTheBlank,
-        'blank': Blank,
         'timed': TimedDirective,
         'qnum': QuestionNumber,
         'codelens': Codelens,
@@ -114,6 +101,7 @@ cmap = {'activecode': ActiveCode,
         'poll': Poll,
         'reveal': RevealDirective,
         'shortanswer': JournalDirective,
+        'showeval': ShowEval,
         'tabbed': TabbedStuffDirective,
         'tab': TabDirective,
         'video': Video,

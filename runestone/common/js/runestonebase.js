@@ -1,6 +1,34 @@
+/**
+  * Runestone Base Class
+  * All runestone components should inherit from RunestoneBase
+  *
+  * In addition all runestone components should do the following things:
+  * 1. Ensure that they are wrapped in a div with the class runestone
+  * 2. Write their source AND their generated html to the database if the database is configured
+  * 3. properly save and restore their answers using the checkServer mechanism in this base class.
+  *    Each component must provide an implementation of
+  *    - checkLocalStorage
+  *    - setLocalStorage
+  *    - restoreAnswers
+  *
+  * 4. provide a Selenium based unit test
+  *
+ **/
+
 function RunestoneBase () {   // Basic parent stuff
 
 }
+
+RunestoneBase.prototype.init = function(opts) {
+
+    this.sid = opts.sid;
+    this.graderactive = opts.graderactive;
+
+    if (opts.enforceDeadline) {
+        this.deadline = opts.deadline;
+    }
+
+};
 
 RunestoneBase.prototype.logBookEvent = function (eventInfo) {
     eventInfo.course = eBookConfig.course;
@@ -28,16 +56,30 @@ RunestoneBase.prototype.logRunEvent = function (eventInfo) {
 
 RunestoneBase.prototype.checkServer = function (eventInfo) {
     // Check if the server has stored answer
-    if (this.useRunestoneServices) {
-        var data = {};
+    if (this.useRunestoneServices || this.graderactive) {
+        let data = {};
         data.div_id = this.divid;
         data.course = eBookConfig.course;
         data.event = eventInfo;
-        jQuery.getJSON(eBookConfig.ajaxURL + "getAssessResults", data, this.repopulateFromStorage.bind(this)).error(this.checkLocalStorage.bind(this));
+        if (this.sid) {
+            data.sid = this.sid
+        }
+        if (!eBookConfig.practice_mode){
+            jQuery.getJSON(eBookConfig.ajaxURL + "getAssessResults", data, this.repopulateFromStorage.bind(this)).error(this.checkLocalStorage.bind(this));
+        }
+        else{
+            this.loadData({});
+        }
     } else {
         this.checkLocalStorage();   // just go right to local storage
     }
 };
+
+RunestoneBase.prototype.loadData = function (data){
+    // for most classes, loadData doesn't do anything. But for Parsons, and perhaps others in the future,
+    // initialization can happen even when there's no history to be loaded
+    return null;
+}
 
 RunestoneBase.prototype.repopulateFromStorage = function (data, status, whatever) {
     // decide whether to use the server's answer (if there is one) or to load from storage
@@ -51,12 +93,14 @@ RunestoneBase.prototype.repopulateFromStorage = function (data, status, whatever
 
 RunestoneBase.prototype.shouldUseServer = function (data) {
     // returns true if server data is more recent than local storage or if server storage is correct
-    if (data.correct == "T" || localStorage.length === 0)
+    if (data.correct === "T" || localStorage.length === 0 || this.graderactive === true) {
         return true;
-    var ex = localStorage.getItem(eBookConfig.email + ":" + this.divid + "-given");
-    if (ex === null)
+    }
+    let ex = localStorage.getItem(eBookConfig.email + ":" + this.divid + "-given");
+    if (ex === null) {
         return true;
-    var storedData;
+    }
+    let storedData;
     try {
         storedData = JSON.parse(ex);
     } catch (err){
@@ -68,9 +112,9 @@ RunestoneBase.prototype.shouldUseServer = function (data) {
     }
     if (data.answer == storedData.answer)
         return true;
-    var storageDate = new Date(storedData.timestamp);
-    var serverDate = new Date(data.timestamp);
-    if (serverDate < storageDate)
-        return false;
-    return true;
+    let storageDate = new Date(storedData.timestamp);
+    let serverDate = new Date(data.timestamp);
+
+    return serverDate >= storageDate;
+
 };

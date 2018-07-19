@@ -17,8 +17,7 @@ __author__ = 'isaiahmayerchak'
 
 from docutils import nodes
 from docutils.parsers.rst import directives
-from docutils.parsers.rst import Directive
-from runestone.common.runestonedirective import RunestoneDirective
+from runestone.common.runestonedirective import RunestoneIdDirective, RunestoneNode
 
 #add directives/javascript/css
 def setup(app):
@@ -28,9 +27,9 @@ def setup(app):
 
     app.add_node(RevealNode, html=(visit_reveal_node, depart_reveal_node))
 
-class RevealNode(nodes.General, nodes.Element):
-    def __init__(self,content):
-        super(RevealNode,self).__init__()
+class RevealNode(nodes.General, nodes.Element, RunestoneNode):
+    def __init__(self,content, **kwargs):
+        super(RevealNode,self).__init__(**kwargs)
         self.reveal_options = content
 
 
@@ -64,7 +63,7 @@ TEMPLATE_START = '''
 TEMPLATE_END = '''
     </div>
     '''
-class RevealDirective(RunestoneDirective):
+class RevealDirective(RunestoneIdDirective):
     """
 .. reveal:: identifier
    :showtitle: Text on the 'show' button--default is "Show"
@@ -79,7 +78,7 @@ class RevealDirective(RunestoneDirective):
     optional_arguments = 0
     final_argument_whitespace = True
     has_content = True
-    option_spec = RunestoneDirective.option_spec.copy()
+    option_spec = RunestoneIdDirective.option_spec.copy()
     option_spec.update({"showtitle":directives.unchanged,
                    "hidetitle":directives.unchanged,
                    "modal":directives.flag,
@@ -99,6 +98,7 @@ class RevealDirective(RunestoneDirective):
             Content
             ...
             """
+        super(RevealDirective, self).run()
         self.assert_has_content() # make sure reveal has something in it
 
         if not 'showtitle' in self.options:
@@ -110,9 +110,8 @@ class RevealDirective(RunestoneDirective):
         else:
             self.options['hidetitle'] = '''data-hidetitle=''' + '"' + self.options['hidetitle'] + '"'
 
-        self.options['divid'] = self.arguments[0]
-
-        reveal_node = RevealNode(self.options)
+        reveal_node = RevealNode(self.options, rawsource=self.block_text)
+        reveal_node.source, reveal_node.line = self.state_machine.get_source_and_line(self.lineno)
 
         self.state.nested_parse(self.content, self.content_offset, reveal_node)
 

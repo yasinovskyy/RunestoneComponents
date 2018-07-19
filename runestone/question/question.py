@@ -16,7 +16,7 @@
 
 from docutils import nodes
 from docutils.parsers.rst import directives
-from runestone.common.runestonedirective import RunestoneDirective
+from runestone.common.runestonedirective import RunestoneIdDirective, RunestoneNode
 
 __author__ = 'bmiller'
 
@@ -27,9 +27,9 @@ def setup(app):
     app.add_node(QuestionNode, html=(visit_question_node, depart_question_node))
 
 
-class QuestionNode(nodes.General, nodes.Element):
-    def __init__(self, content):
-        super(QuestionNode, self).__init__()
+class QuestionNode(nodes.General, nodes.Element, RunestoneNode):
+    def __init__(self, content, **kwargs):
+        super(QuestionNode, self).__init__(**kwargs)
         self.question_options = content
 
 
@@ -70,7 +70,7 @@ TEMPLATE_END = '''
     '''
 
 
-class QuestionDirective(RunestoneDirective):
+class QuestionDirective(RunestoneIdDirective):
     """
 .. question:: identifier
    :number: Force a number for this question
@@ -82,17 +82,17 @@ class QuestionDirective(RunestoneDirective):
     optional_arguments = 0
     final_argument_whitespace = True
     has_content = True
-    option_spec = RunestoneDirective.option_spec.copy()
+    option_spec = RunestoneIdDirective.option_spec.copy()
     option_spec.update({'number': directives.positive_int})
 
     def run(self):
+        super(QuestionDirective, self).run()
         self.assert_has_content()  # make sure question has something in it
-        self.options['divid'] = self.arguments[0]
-        self.options['basecourse'] = self.state.document.settings.env.config.html_context.get('basecourse', "unknown")
 
         self.options['name'] = self.arguments[0].strip()
 
-        question_node = QuestionNode(self.options)
+        question_node = QuestionNode(self.options, rawsource=self.block_text)
+        question_node.source, question_node.line = self.state_machine.get_source_and_line(self.lineno)
         self.add_name(question_node)
 
         self.state.nested_parse(self.content, self.content_offset, question_node)

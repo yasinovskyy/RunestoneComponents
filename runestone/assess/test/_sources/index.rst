@@ -2,21 +2,10 @@
 Testing: Multiple Choice and Multiple Answer Questions
 ======================================================
 
-.. Here is were you specify the content and order of your new book.
-
-.. Each section heading (e.g. "SECTION 1: A Random Section") will be
-   a heading in the table of contents. Source files that should be
-   generated and included in that section should be placed on individual
-   lines, with one line separating the first source filename and the
-   :maxdepth: line.
-
-.. Sources can also be included from subfolders of this directory.
-   (e.g. "DataStructures/queues.rst").
-
-
 Multiple Answer
----------------
-
+===============
+Old style
+---------
 .. mchoice:: question1
     :multiple_answers:
     :correct: a, c
@@ -31,10 +20,101 @@ Multiple Answer
 
     Which colors might be found in a rainbow (check all)?
 
+New style
+---------
+.. mchoice:: question1_new
+
+    Which colors might be found in a rainbow (check all)?
+
+    -   red
+
+        +   Red it is.
+
+    -   brown
+
+        -   Not brown.
+
+    -   blue
+
+        +   Blue it is.
+
+    -   gray
+
+        -   Not gray.
+
+Test error handling
+^^^^^^^^^^^^^^^^^^^
+.. mchoice:: error1_no_content
+
+.. mchoice:: error2
+
+    No list is provided.
+
+.. mchoice:: error3
+
+    A list with missing sublists.
+
+    -   One
+
+        +   Yes.
+
+    -   Two
+
+
+.. mchoice:: error4
+
+    A list with extra sublists.
+
+    -   One
+
+        +   Yes.
+        +   OK.
+
+    -   Two
+
+        -   No.
+
+.. This just produces a confused question. The auto-numbering in the base classes prepends ``Q-x`` to ``-   One``, which means it's no longer a list. There's no easy way to detect this, without rewriting the way question numbers are prepended.
+
+    .. mchoice:: error5_only_list_is_provided
+
+        -   One
+
+            +   Yes.
+
+        -   Two
+
+            -   No.
+
+.. mchoice:: error6
+
+    A list with something else instead of sublists.
+
+    -   One
+
+        Not a sublist.
+
+    -   Two
+
+        +   No
+
+
+.. mchoice:: error7
+
+    No correct answers.
+
+    -   One
+
+        -   No.
+
+    -   Two
+
+        -   Nope.
 
 Multiple Choice
----------------
-
+===============
+Old style
+---------
 .. mchoice:: question2
     :correct: a
     :answer_a: red
@@ -46,4 +126,27 @@ Multiple Choice
     :feedback_c: Not black.
     :feedback_d: Not gray.
 
-    Which color might be found in a rainbow?
+    What color is a stop sign?
+
+New style
+---------
+.. mchoice:: question2_new
+
+    What color is a stop sign?
+
+    -   red
+
+        +   Red it is.
+
+    -   brown
+
+        -   Not brown.
+
+    -   blue
+
+        -   Not blue.
+
+    -   gray
+
+        -   Not gray.
+

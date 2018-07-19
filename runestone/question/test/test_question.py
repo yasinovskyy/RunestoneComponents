@@ -1,17 +1,8 @@
-from selenium import webdriver
-from selenium.webdriver import ActionChains
-from selenium.common.exceptions import WebDriverException
-import unittest
-import sys
+from runestone.unittest_base import module_fixture_maker, RunestoneTestCase
 
-PORT = '8081'
+setUpModule, tearDownModule = module_fixture_maker(__file__)
 
-class QuestionTests(unittest.TestCase):
-    def setUp(self):
-        #self.driver = webdriver.Firefox()  # good for development
-        self.driver = webdriver.PhantomJS() # use this for Jenkins auto testing
-        self.host = 'http://127.0.0.1:' + PORT
-
+class QuestionTests(RunestoneTestCase):
     def test_hello(self):
         '''
         1. Get the outer div id of the activecode component
@@ -38,45 +29,33 @@ class QuestionTests(unittest.TestCase):
         num = li.get_attribute("start")
         self.assertEqual(num,"2")
 
-    def test_mc(self):
-        self.driver.get(self.host + "/index.html")
-        t1 = self.driver.find_element_by_id("qtest_2")
-        cbs = t1.find_elements_by_tag_name("li")
-        for el in cbs:
-            el.click()
+    # def test_mc(self):
+    #     self.driver.get(self.host + "/index.html")
+    #     t1 = self.driver.find_element_by_id("qtest_2")
+    #     cbs = t1.find_elements_by_tag_name("li")
+    #     for el in cbs:
+    #         el.click()
+    #
+    #     checkme = t1.find_element_by_tag_name('button')
+    #     checkme.click()
+    #
+    #     fb = t1.find_element_by_id("question1_2_feedback")
+    #     self.assertIsNotNone(fb)
+    #     cnamestr = fb.get_attribute("class")
+    #     self.assertEqual(cnamestr, "alert alert-danger")
+    #
+    # def test_mc2(self):
+    #     self.driver.get(self.host + "/index.html")
+    #     t1 = self.driver.find_element_by_id("qtest_2")
+    #     t1.find_element_by_id("question1_2_opt_0").click()
+    #     t1.find_element_by_id("question1_2_opt_1").click()
+    #     t1.find_element_by_id("question1_2_opt_3").click()
+    #
+    #     checkme = t1.find_element_by_tag_name('button')
+    #     checkme.click()
+    #
+    #     fb = t1.find_element_by_id("question1_2_feedback")
+    #     self.assertIsNotNone(fb)
+    #     cnamestr = fb.get_attribute("class")
+    #     self.assertEqual(cnamestr, "alert alert-success")
 
-        checkme = t1.find_element_by_tag_name('button')
-        checkme.click()
-
-        fb = t1.find_element_by_id("question1_2_feedback")
-        self.assertIsNotNone(fb)
-        cnamestr = fb.get_attribute("class")
-        self.assertEqual(cnamestr, "alert alert-danger")
-
-    def test_mc2(self):
-        self.driver.get(self.host + "/index.html")
-        t1 = self.driver.find_element_by_id("qtest_2")
-        t1.find_element_by_id("question1_2_opt_0").click()
-        t1.find_element_by_id("question1_2_opt_1").click()
-        t1.find_element_by_id("question1_2_opt_3").click()
-
-        checkme = t1.find_element_by_tag_name('button')
-        checkme.click()
-
-        fb = t1.find_element_by_id("question1_2_feedback")
-        self.assertIsNotNone(fb)
-        cnamestr = fb.get_attribute("class")
-        self.assertEqual(cnamestr, "alert alert-success")
-
-
-
-    def tearDown(self):
-        self.driver.quit()
-
-
-
-
-if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        PORT = sys.argv.pop()
-    unittest.main()

@@ -22,6 +22,7 @@ options(
         sourcedir="_sources",
         outdir="./build/activecodetest",
         confdir=".",
+        quiet=True,
         project_name = "activecodetest",
         template_args={'course_id': 'activecodetest',
                        'login_required':'false',
@@ -31,12 +32,15 @@ options(
                        'use_services': 'false',
                        'python3': 'true',
                        'dburl': '',
-                       'basecourse': 'activecodetest'
+                       'basecourse': 'activecodetest',
+                       'jobe_server': 'http://jobe2.cosc.canterbury.ac.nz',
+                       'proxy_uri_runs': '/jobe/index.php/restapi/runs/',
+                       'proxy_uri_files': '/jobe/index.php/restapi/files/'
                         }
     )
 )
 
-# If DBUSER etc. are in the environment override dburl
+# If DBURL is in the environment override dburl
 options.build.template_args['dburl'] = get_dburl(outer=locals())
 
 from runestone import build  # build is called implicitly by the paver driver.

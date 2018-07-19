@@ -15,10 +15,7 @@
 #
 __author__ = 'bmiller'
 
-from docutils import nodes
-from docutils.parsers.rst import directives
-from docutils.parsers.rst import Directive
-from runestone.common.runestonedirective import RunestoneDirective
+from runestone.common.runestonedirective import RunestoneIdDirective
 
 _base_js_escapes = (
     ('\\', r'\u005C'),
@@ -51,7 +48,7 @@ def escapejs(value):
     return value
 
 
-class Assessment(RunestoneDirective):
+class Assessment(RunestoneIdDirective):
     """Base Class for assessments"""
 
     def getNumber(self):
@@ -74,17 +71,15 @@ class Assessment(RunestoneDirective):
 
 
     def run(self):
-
+        super(Assessment, self).run()
         self.options['qnumber'] = self.getNumber()
-        
-        self.options['divid'] = self.arguments[0]
-
-        if self.content[0][:2] == '..':  # first line is a directive
-            self.content[0] = self.options['qnumber'] + ': \n\n' + self.content[0]
-        else:
-            self.content[0] = self.options['qnumber'] + ': ' + self.content[0]
 
         if self.content:
+            if self.content[0][:2] == '..':  # first line is a directive
+                self.content[0] = self.options['qnumber'] + ': \n\n' + self.content[0]
+            else:
+                self.content[0] = self.options['qnumber'] + ': ' + self.content[0]
+
             if 'iscode' in self.options:
                 self.options['bodytext'] = '<pre>' + "\n".join(self.content) + '</pre>'
             else:

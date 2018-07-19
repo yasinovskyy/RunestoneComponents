@@ -16,8 +16,13 @@ RunestoneComponents
 .. image:: http://bnmnetp.me:8088/buildStatus/icon?job=RunestoneComponents&build=9
 
 Packaging of the Runestone components for publishing educational materials using Sphinx and restructuredText. Check out the `Overview <http://interactivepython.org/runestone/static/overview/overview.html>`_ To see all of the extensions in action.
-**NOTE** -- If you have used an older version of this repo, please know this is a total restart.  I think much better, and it WILL stay up to date as this is now the master copy of the components not just a copy.
-Check out the `Development Roadmap <https://github.com/bnmnetp/runestone/wiki>`_ to get an understanding of our migration towards webcomponents.
+
+Documentation
+-------------
+
+Summer 2018 has brought some great updates to our documentation.  You will find the new docs on runestoneinteractive.org `here <http://runestoneinteractive.org/build/html/index.html>`_  
+
+If you want to report any issues with the docs or submit PRs to improve them please do so on `github <https://github.com/RunestoneInteractive/runestoneinteractive.github.io/issues>`_
 
 
 Quick Start
@@ -39,7 +44,7 @@ If you are completely new to pip and github text editors, I have written a more 
     $ virtualenv /path/to/home/MyEnv
     $ source /path/to/home/MyEnv/bin/activate
      
-* You will need to do the last command every time you want to work on RunestoneServer.  If you have not used Python virtual environments before I strongly recommend reading the docs or watching the video
+* You will need to do the last command **every time** you want to work on RunestoneComponents.  If you have not used Python virtual environments before I strongly recommend reading the docs or watching the video
  
 With the virtual environment installed and configured you can continue.
 
@@ -53,7 +58,7 @@ Or, if you prefer to live on the development edge, you can check out the very la
 
 ::
 
-    pip install git+git://github.com/RunestoneInteractive/RunestoneTools.git
+    pip install git+git://github.com/RunestoneInteractive/RunestoneComponents.git
 
 
 To start a project, create a new folder and then run the following command (installed by pip)  in that new folder ``runestone init``  For example:
@@ -93,7 +98,7 @@ link on `Using Python with Windows <https://docs.python.org/3.4/using/windows.ht
 Developing and Hacking
 ----------------------
 
-So, you would like to help out with developing the Runestone Components.  What do you need to know?
+So, you would like to help out with developing the Runestone Components.  What do you need to know?  Check out the `Development Roadmap <https://github.com/bnmnetp/runestone/wiki>`_ to get an understanding of our migration towards webcomponents.
 
 1.  Make a Fork of this repository. 
 2.  Set up your environment on your development machine
@@ -114,33 +119,42 @@ Our goal is to have unit tests which rely on Selenium (a library that helps simu
 
 **In order to get started with writing a test/writing additional tests, you will need the following:**
 
-* ``pip install selenium`` in the virtualenv you're using for Runestone Components development
 
-* Download `PhantomJS <http://phantomjs.org/>`_., which is a driver that helps you simulate the browser. You can download it `here <http://phantomjs.org/download.html>`_.
+* Download the latest `ChromeDriver <https://chromedriver.storage.googleapis.com/index.html>`_., which is a driver that simulates Google Chrome.
 
-* You'll also need to have done the above installation. 
+* On linux you will need to install Xvfb ``apt-get install xvfb``
+
+* You'll also need to have done the above installation.
   
-  * You should be using virtual environment, you'll need a clone of the RunestoneComponents repository, and you'll need to have done ``pip install -e`` from the top level of the RunestoneComponents directory.
+  * You should be using virtual environment, 
+    you'll need a clone of the RunestoneComponents repository, 
+    and you'll need to have done ``pip install -e .`` from 
+    the top level of the RunestoneComponents directory.
+
+* If you have installed RunestoneComponents in your virtualenv using ``pip install -e .``,
+  then you should have all the python dependencies you need.
+
+  * ``pip install selenium`` in the virtualenv you're using for Runestone Components development
+  * ``pip install pyvirtualdisplay``
+
 
 **To run tests:**
 
-* Make sure the directory containing the PhantomJS executable is in your ``PATH`` environment variable. e.g. ``PATH=$PATH:path/to/thedirectory/where/it/is/here`` at your command line (or edit your ``.bash_profile``).
+* Make sure the directory containing the PhantomJS executable is in your ``PATH`` environment variable. e.g. ``PATH=$PATH:path/to/virtualenv/directory/where/it/is/here`` at your command line (or edit your ``.bash_profile``). It should live in the site-packages/selenium/webdriver/ directory of your virtualenv.
 
 * Check out the existing tests, e.g. the ``test_question.py`` file that tests the Question directive, which you can find at the path ``/runestone/question/test/test_question.py``, for an example.
 
 * Each directive's individual set of tests requires a mini book. You'll see a ``_sources`` folder for each existing test containing an ``index.rst`` file. That file contains a title, as required by ``.rst``, and whatever directive examples you want to test.
 
-* Finally, to run a test, ensuring that you have accessed a ``test`` folder within a directive folder, type the following at the command prompt in this order:
+* Finally, to run a test, ensuring that you have accessed a directive folder, type the following at the command prompt:
 
-  * ``runestone build`` (to build the mini-book for testing)
-
-  * ``runestone serve --port 8081 &`` 
-
-  * ``python <testfilename>.py``, e.g. ``python test_question.py``
+  * ``python -m unittest discover``
 
 .. note:: 
 
-  8081 is the default test port. See the Python files, e.g. ``test_question.py``, to see how this is set up. The ``&`` will set the process to run in the background. The mini-book needs to be served in order to test what's in the DOM as a result of using these components!
+  8081 is the default test port. 
+  If you are running another server on this port, you may encounter an error.
+  See the Python files, e.g. ``test_question.py``, to see how this is set up. 
 
 You should then see some test output, showing a pass (``ok``), FAIL, or error(s).
 

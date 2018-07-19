@@ -15,31 +15,30 @@
 #
 __author__ = 'isaiahmayerchak'
 #acbart did most of this code, I mostly just changed the template
-import os
 
 from docutils import nodes
 from docutils.parsers.rst import directives
-from docutils.parsers.rst import Directive
 from runestone.assess import Assessment
 from runestone.server.componentdb import addQuestionToDB, addHTMLToDB
-from runestone.common.runestonedirective import RunestoneDirective
+from runestone.common.runestonedirective import RunestoneDirective, RunestoneNode
 
 def setup(app):
     app.add_directive('shortanswer', JournalDirective)
     app.add_node(JournalNode, html=(visit_journal_node, depart_journal_node))
     app.add_javascript('shortanswer.js')
     app.add_javascript('timed_shortanswer.js')
-
+    app.add_config_value('shortanswer_div_class', 'journal alert alert-warning', 'html')
+    app.add_config_value('shortanswer_optional_div_class', 'journal alert alert-success', 'html')
 
 TEXT = """
-<div class="runestone"
-<p data-component="shortanswer" id=%(divid)s %(optional)s>%(qnum)s: %(content)s</p>
+<div class="runestone">
+<p data-component="shortanswer" class="%(divclass)s" id=%(divid)s %(optional)s>%(qnum)s: %(content)s</p>
 </div>
 """
 
-class JournalNode(nodes.General, nodes.Element):
-    def __init__(self, options):
-        super(JournalNode, self).__init__()
+class JournalNode(nodes.General, nodes.Element, RunestoneNode):
+    def __init__(self, options, **kwargs):
+        super(JournalNode, self).__init__(**kwargs)
         self.journalnode_components = options
 
 def visit_journal_node(self, node):
@@ -61,27 +60,37 @@ class JournalDirective(Assessment):
    :optional:
 
    text of the question goes here
+
+
+config values (conf.py): 
+
+- shortanswer_div_class - custom CSS class of the component's outermost div
     """
     required_arguments = 1  # the div id
     optional_arguments = 0
     final_argument_whitespace = True
     has_content = True
-    option_spec = RunestoneDirective.option_spec.copy()
+    option_spec = Assessment.option_spec.copy()
     option_spec.update({'optional': directives.flag})
 
     node_class = JournalNode
 
     def run(self):
-        # Raise an error if the directive does not have contents.
-
+        super(JournalDirective, self).run()
         addQuestionToDB(self)
-
+        # Raise an error if the directive does not have contents.
         self.assert_has_content()
 
         self.options['optional'] = 'data-optional' if 'optional' in self.options else ''
-        self.options['divid'] = self.arguments[0]
         self.options['content'] = "<p>".join(self.content)
         self.options['qnum'] = self.getNumber()
-        journal_node = JournalNode(self.options)
+        journal_node = JournalNode(self.options, rawsource=self.block_text)
+        journal_node.source, journal_node.line = self.state_machine.get_source_and_line(self.lineno)
+
+        env = self.state.document.settings.env
+        if self.options['optional']:
+            self.options['divclass'] = env.config.shortanswer_optional_div_class
+        else:
+            self.options['divclass'] = env.config.shortanswer_div_class
 
         return [journal_node]

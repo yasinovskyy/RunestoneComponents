@@ -14,6 +14,7 @@ function Poll(opts) {
 
 Poll.prototype.init = function (opts) {
     RunestoneBase.apply(this, arguments);
+    RunestoneBase.prototype.init.apply(this, arguments);
     var orig = opts.orig;  //entire <p> element
     this.origElem = orig;
     this.divid = orig.id;
@@ -66,7 +67,7 @@ Poll.prototype.renderPoll = function() {
     this.resultsDiv = document.createElement("div");
 
     this.containerDiv.id = this.divid + "_container";
-    $(this.containerDiv).addClass("alert alert-warning");
+    $(this.containerDiv).addClass(this.origElem.getAttribute("class"));
 
     $(this.pollForm).text(this.question);
     $(this.pollForm).attr({

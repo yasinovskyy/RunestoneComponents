@@ -1,17 +1,12 @@
-from selenium import webdriver
 from selenium.webdriver import ActionChains
-from selenium.common.exceptions import WebDriverException
-import unittest
-import sys
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.by import By
+import time
+from runestone.unittest_base import module_fixture_maker, RunestoneTestCase
 
-PORT = '8081'
-
-class ActiveCodeTests(unittest.TestCase):
-    def setUp(self):
-        #self.driver = webdriver.Firefox()  # good for development
-        self.driver = webdriver.PhantomJS() # use this for Jenkins auto testing
-        self.host = 'http://127.0.0.1:' + PORT
-
+setUpModule, tearDownModule = module_fixture_maker(__file__)
+class ActiveCodeTests(RunestoneTestCase):
     def test_hello(self):
         '''
         1. Get the outer div id of the activecode component
@@ -47,6 +42,7 @@ class ActiveCodeTests(unittest.TestCase):
         ta = t1.find_element_by_class_name("cm-s-default")
         self.assertIsNotNone(ta)
         self.driver.execute_script("""edList['test1'].editor.setValue("print('GoodBye')")""")
+        WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.CLASS_NAME, "run-button")))
         rb.click()
         output = t1.find_element_by_class_name("ac_output")
         self.assertEqual(output.text.strip(),"GoodBye")
@@ -59,12 +55,25 @@ class ActiveCodeTests(unittest.TestCase):
         output = t1.find_element_by_class_name("ac_output")
         self.assertEqual(output.text.strip(), "Hello World")
 
-    def tearDown(self):
-        self.driver.quit()
 
+    def test_datafile(self):
+        '''
+        Runs test2 example
+        Code is dependent on supplementary file
+        '''
+        self.driver.get(self.host + "/index.html")
+        t2 = self.driver.find_element_by_id("test2")
+        self.assertIsNotNone(t2)
+        rb = t2.find_element_by_class_name("run-button")
+        self.assertIsNotNone(rb)
+        rb.click()
+        output = t2.find_element_by_class_name("ac_output")
 
+        count = 0
+        # Give it some time run
+        print(output.text)
+        while output.text.strip() != "Width: 25.0" and count < 20:
+            count += 1
+            time.sleep(.5)
 
-if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        PORT = sys.argv.pop()
-    unittest.main()
+        self.assertLess(count, 20)

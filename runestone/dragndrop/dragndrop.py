@@ -19,8 +19,8 @@ __author__ = 'isaiahmayerchak'
 from docutils import nodes
 from docutils.parsers.rst import directives
 from docutils.parsers.rst import Directive
-from runestone.server.componentdb import addQuestionToDB
-from runestone.common.runestonedirective import RunestoneDirective
+from runestone.server.componentdb import addQuestionToDB, addHTMLToDB
+from runestone.common.runestonedirective import RunestoneIdDirective, RunestoneNode
 
 def setup(app):
     app.add_directive('dragndrop',DragNDrop)
@@ -30,9 +30,11 @@ def setup(app):
 
     app.add_node(DragNDropNode, html=(visit_dnd_node, depart_dnd_node))
 
+    app.add_config_value('dragndrop_div_class', 'runestone', 'html')
+
 
 TEMPLATE_START = """
-<div class="runestone">
+<div class="%(divclass)s">
 <ul data-component="dragndrop" id="%(divid)s">
     <span data-component="question">%(question)s</span>
 	%(feedback)s
@@ -41,19 +43,18 @@ TEMPLATE_START = """
 TEMPLATE_OPTION = """
     <li data-component="draggable" id="%(divid)s_drag%(dnd_label)s">%(dragText)s</li>
     <li data-component="dropzone" for="%(divid)s_drag%(dnd_label)s">%(dropText)s</li>
-    </div>
 """
-TEMPLATE_END = """</ul>"""
+TEMPLATE_END = """</ul></div>"""
 
 
-class DragNDropNode(nodes.General, nodes.Element):
-    def __init__(self,content):
+class DragNDropNode(nodes.General, nodes.Element, RunestoneNode):
+    def __init__(self,content, **kwargs):
         """
         Arguments:
         - `self`:
         - `content`:
         """
-        super(DragNDropNode,self).__init__()
+        super(DragNDropNode,self).__init__(**kwargs)
         self.dnd_options = content
 
 # self for these functions is an instance of the writer class.  For example
@@ -61,6 +62,9 @@ class DragNDropNode(nodes.General, nodes.Element):
 # The node that is passed as a parameter is an instance of our node class.
 def visit_dnd_node(self,node):
     res = TEMPLATE_START
+
+    node.delimiter = "_start__{}_".format(node.dnd_options['divid'])
+    self.body.append(node.delimiter)
 
     if "feedback" in node.dnd_options:
         node.dnd_options["feedback"] = "<span data-component=feedback>" + node.dnd_options["feedback"] + "</span>"
@@ -87,22 +91,32 @@ def depart_dnd_node(self,node):
     res += node.template_end % node.dnd_options
     self.body.append(res)
 
+    addHTMLToDB(node.dnd_options['divid'],
+                node.dnd_options['basecourse'],
+                "".join(self.body[self.body.index(node.delimiter) + 1:]))
 
-class DragNDrop(RunestoneDirective):
+    self.body.remove(node.delimiter)
+
+
+class DragNDrop(RunestoneIdDirective):
     """
 .. dragndrop:: identifier
     :feedback: Feedback that is displayed if things are incorrectly matched--is optional
     :match_1: Draggable element text|||Dropzone to be matched with text
     :match_2: Drag to Answer B|||Answer B
     :match_3: Draggable text|||Text of dropzone
-    ...etc...(up to 20 matches)
+    etc. (up to 20 matches)
 
     The question goes here.
+
+config values (conf.py): 
+
+- dragndrop_div_class - custom CSS class of the component's outermost div
     """
     required_arguments = 1
     optional_arguments = 0
     has_content = True
-    option_spec = RunestoneDirective.option_spec.copy()
+    option_spec = RunestoneIdDirective.option_spec.copy()
     option_spec.update({"feedback":directives.unchanged,
         "match_1":directives.unchanged,
         "match_2":directives.unchanged,
@@ -141,9 +155,8 @@ class DragNDrop(RunestoneDirective):
 
                 The question goes here.
         """
+        super(DragNDrop, self).run()
         addQuestionToDB(self)
-
-        self.options['divid'] = self.arguments[0]
 
         if self.content:
             source = "\n".join(self.content)
@@ -151,9 +164,11 @@ class DragNDrop(RunestoneDirective):
             source = '\n'
 
         self.options['question'] = source
+        env = self.state.document.settings.env
+        self.options['divclass'] = env.config.dragndrop_div_class
 
-
-        dndNode = DragNDropNode(self.options)
+        dndNode = DragNDropNode(self.options, rawsource=self.block_text)
+        dndNode.source, dndNode.line = self.state_machine.get_source_and_line(self.lineno)
         dndNode.template_start = TEMPLATE_START
         dndNode.template_option = TEMPLATE_OPTION
         dndNode.template_end = TEMPLATE_END

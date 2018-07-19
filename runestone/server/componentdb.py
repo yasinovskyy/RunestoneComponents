@@ -20,22 +20,26 @@ from datetime import datetime
 __author__ = 'bmiller'
 
 import os
-from sqlalchemy import create_engine, Table, MetaData, select, delete, update, and_
+from sqlalchemy import create_engine, Table, MetaData, select, and_
+from . import get_dburl
+from runestone.common.runestonedirective import RunestoneDirective
 
 # create a global DB query engine to share for the rest of the file
-if all(name in os.environ for name in ['DBHOST', 'DBPASS', 'DBUSER', 'DBNAME']):
-    dburl = 'postgresql://{DBUSER}:{DBPASS}@{DBHOST}/{DBNAME}'.format(**os.environ)
-    engine = create_engine(dburl)
+try:
+    dburl = get_dburl()
+    engine = create_engine(dburl, client_encoding='utf8', convert_unicode=True)
+except RuntimeError as e:
+    dburl = None
+    engine = None
+    meta = None
+    print("Skipping all DB operations because environment variables not set up")
+else:
+    # If no exceptions are raised, then set up the database.
     meta = MetaData()
     questions = Table('questions', meta, autoload=True, autoload_with=engine)
     assignment_types = Table('assignment_types', meta, autoload=True, autoload_with=engine)
     assignment_questions = Table('assignment_questions', meta, autoload=True, autoload_with=engine)
     courses = Table('courses', meta, autoload=True, autoload_with=engine)
-
-else:
-    dburl = None
-    engine = None
-    print("Skipping all DB operations because environment variables not set up")
 
 def logSource(self):
     sourcelog = self.state.document.settings.env.config.html_context.get('dsource', None)
@@ -51,10 +55,8 @@ def logSource(self):
 
 
 def addQuestionToDB(self):
-    if all(name in os.environ for name in ['DBHOST', 'DBPASS', 'DBUSER', 'DBNAME']):
-        dburl = 'postgresql://{DBUSER}:{DBPASS}@{DBHOST}/{DBNAME}'.format(**os.environ)
-    else:
-        dburl = None
+    # ``self`` must be a RunestoneDirective.
+    assert isinstance(self, RunestoneDirective)
 
     if dburl:
         basecourse = self.state.document.settings.env.config.html_context.get('basecourse', "unknown")
@@ -72,31 +74,32 @@ def addQuestionToDB(self):
         if 'author' in self.options:
             author = self.options['author']
         else:
-            author = os.environ.get('USER','Brad Miller')
-
-        srcpath, line = self.state_machine.get_source_and_line()
-        subchapter = os.path.basename(srcpath).replace('.rst','')
-        chapter = srcpath.split(os.path.sep)[-2]
+            author = os.environ.get('USER', 'Brad Miller')
 
         autograde = self.options.get('autograde', None)
+        practice = self.options.get('practice', None)
+        if ('topics' in self.options) and  (self.options['topics'] != ''):
+            topics = self.options['topics']
+        else:
+            topics = "{}/{}".format(self.chapter, self.subchapter)
+#        topics = self.options.get('topics', "{}/{}".format(self.chapter, self.subchapter))
 
-
-        sel = select([questions]).where(and_(questions.c.name == self.arguments[0],
+        id_ = self.options['divid']
+        sel = select([questions]).where(and_(questions.c.name == id_,
                                               questions.c.base_course == basecourse))
         res = engine.execute(sel).first()
         try:
             if res:
-                stmt = questions.update().where(questions.c.id == res['id']).values(question = self.block_text.encode('utf8'), timestamp=last_changed, is_private='F',
-question_type=self.name, subchapter=subchapter, autograde = autograde, author=author,difficulty=difficulty,chapter=chapter)
+                stmt = questions.update().where(questions.c.id == res['id']).values(question = self.block_text, timestamp=last_changed, is_private='F', question_type=self.name, subchapter=self.subchapter, autograde=autograde, author=author,difficulty=difficulty,chapter=self.chapter, practice=practice, topic=topics)
                 engine.execute(stmt)
             else:
-                ins = questions.insert().values(base_course=basecourse, name=self.arguments[0], question=self.block_text.encode('utf8'), timestamp=last_changed, is_private='F', question_type=self.name, subchapter=subchapter, autograde = autograde, author=author,difficulty=difficulty,chapter=chapter)
+                ins = questions.insert().values(base_course=basecourse, name=id_, question=self.block_text, timestamp=last_changed, is_private='F', question_type=self.name, subchapter=self.subchapter, autograde=autograde, author=author,difficulty=difficulty,chapter=self.chapter, practice=practice, topic=topics)
+
                 engine.execute(ins)
         except UnicodeEncodeError:
-            raise self.severe("Bad character in directive {} in {}/{} this will not be saved to the DB".format(self.arguments[0], self.chapter, self.subchapter))
+            raise self.severe("Bad character in directive {} in {}/{}. This will not be saved to the DB".format(id_, self.chapter, self.subchapter))
 
 def getQuestionID(base_course, name):
-    meta = MetaData()
 
     sel = select([questions]).where(and_(questions.c.name == name,
                                           questions.c.base_course == base_course))
@@ -142,7 +145,6 @@ def getOrInsertQuestionForPage(base_course=None, name=None, is_private='F', ques
 def getOrCreateAssignmentType(assignment_type_name, grade_type = None, points_possible = None, assignments_count = None, assignments_dropped = None):
 
 
-
     # search for it in the DB
     sel = select([assignment_types]).where(assignment_types.c.name == assignment_type_name)
     res = engine.execute(sel).first()
@@ -159,32 +161,27 @@ def getOrCreateAssignmentType(assignment_type_name, grade_type = None, points_po
         res = engine.execute(ins)
         return res.inserted_primary_key[0]
 
-def addAssignmentQuestionToDB(question_id, assignment_id, points, assessment_type = None, timed=None, autograde=None):
+def addAssignmentQuestionToDB(question_id, assignment_id, points, activities_required = 0, autograde=None, which_to_grade = None, reading_assignment=None, sorting_priority=0):
     # now insert or update the assignment_questions row
     sel = select([assignment_questions]).where(and_(assignment_questions.c.assignment_id == assignment_id,
                                           assignment_questions.c.question_id == question_id))
     res = engine.execute(sel).first()
-    if res:
-        #update
-        stmt = assignment_questions.update().where(assignment_questions.c.id == res['id']).values( \
+    vals = dict(
             assignment_id = assignment_id,
             question_id = question_id,
-            points = points,
-            timed= timed,
-            assessment_type = assessment_type,
-            autograde = autograde
-            )
+            activities_required=activities_required,
+            points=points,
+            autograde=autograde,
+            which_to_grade = which_to_grade,
+            reading_assignment = reading_assignment,
+            sorting_priority = sorting_priority)
+    if res:
+        #update
+        stmt = assignment_questions.update().where(assignment_questions.c.id == res['id']).values(**vals)
         engine.execute(stmt)
     else:
         #insert
-        ins = assignment_questions.insert().values(
-            assignment_id = assignment_id,
-            question_id = question_id,
-            points = points,
-            timed=timed,
-            assessment_type = assessment_type,
-            autograde = autograde
-            )
+        ins = assignment_questions.insert().values(**vals)
         engine.execute(ins)
 
 def getCourseID(coursename):
@@ -192,7 +189,7 @@ def getCourseID(coursename):
     res = engine.execute(sel).first()
     return res['id']
 
-def addAssignmentToDB(name = None, course_id = None, assignment_type_id = None, deadline = None, points = None, threshold = None):
+def addAssignmentToDB(name = None, course_id = None, assignment_type_id = None, deadline = None, points = None):
 
     last_changed = datetime.now()
     sel = select([assignments]).where(and_(assignments.c.name == name,
@@ -202,8 +199,7 @@ def addAssignmentToDB(name = None, course_id = None, assignment_type_id = None, 
         stmt = assignments.update().where(assignments.c.id == res['id']).values(
             assignment_type = assignment_type_id,
             duedate = deadline,
-            points = points,
-            threshold = threshold
+            points = points
         )
         engine.execute(stmt)
         a_id = res['id']
@@ -218,19 +214,13 @@ def addAssignmentToDB(name = None, course_id = None, assignment_type_id = None, 
             name=name,
             assignment_type = assignment_type_id,
             duedate = deadline,
-            points = points,
-            threshold = threshold)
+            points = points)
         res = engine.execute(ins)
         a_id = res.inserted_primary_key[0]
 
     return a_id
 
 def addHTMLToDB(divid, basecourse, htmlsrc):
-    if all(name in os.environ for name in ['DBHOST', 'DBPASS', 'DBUSER', 'DBNAME']):
-        dburl = 'postgresql://{DBUSER}:{DBPASS}@{DBHOST}/{DBNAME}'.format(**os.environ)
-    else:
-        dburl = None
-
     if dburl:
         last_changed = datetime.now()
         sel = select([questions]).where(and_(questions.c.name == divid,
@@ -239,7 +229,7 @@ def addHTMLToDB(divid, basecourse, htmlsrc):
         try:
             if res:
                 if res['htmlsrc'] != htmlsrc:
-                    stmt = questions.update().where(questions.c.id == res['id']).values(htmlsrc = htmlsrc.encode('utf8'), timestamp=last_changed)
+                    stmt = questions.update().where(questions.c.id == res['id']).values(htmlsrc = htmlsrc, timestamp=last_changed)
                     engine.execute(stmt)
         except UnicodeEncodeError:
             print("Bad character in directive {}".format(divid))

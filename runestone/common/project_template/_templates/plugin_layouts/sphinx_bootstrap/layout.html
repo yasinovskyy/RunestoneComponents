@@ -6,23 +6,16 @@
     '_static'+'/bootstrap-3.0.0/js/bootstrap.min.js',
     '_static'+'/bootstrap-sphinx.js',
     '_static'+'/waypoints.min.js',
-    '_static'+'/rangy-core.js',
-    '_static'+'/rangy-textrange.js',
-    '_static'+'/rangy-cssclassapplier.js',
     '_static'+'/user-highlights.js',
     '_static'+'/jquery.idle-timer.js',
     '_static'+'/processing-1.4.1.min.js',
     '_static'+'/jquery.hotkey.js',
-    '_static'+'/jquery-migrate-1.2.1.min.js'
+    '_static'+'/jquery-migrate-1.2.1.min.js',
+    '_static'+'/presenter_mode.js',
   ]
 %}
 
-{% set css_files = ['_static/bootstrap-3.0.0/css/bootstrap.min.css'] + css_files %}
-{% if theme_bootswatch_theme %}
-  {% set css_files = css_files +
-    ['http://netdna.bootstrapcdn.com/bootswatch/2.3.1/' + theme_bootswatch_theme + '/bootstrap.min.css']
-  %}
-{% endif %}
+{% set css_files = ['_static/bootstrap-3.0.0/css/bootstrap.min.css', '_static/presenter_mode.css'] + css_files %}
 
 {% set css_files = css_files + [
     '_static'+'/jquery-ui-1.10.3.custom.min.css',
@@ -44,7 +37,7 @@
 
   <div class="container">
 
-    <div class="navbar-header">
+    <div class="navbar-header" style="width:20%">
       <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
       <button type='button' class='navbar-toggle' data-toggle="collapse" data-target=".navbar-ex1-collapse">
         <span class="icon-bar"></span>
@@ -57,17 +50,15 @@
         <a class="navbar-brand" href="{{ pathto(master_doc) }}">{% if theme_navbar_title -%}{{ theme_navbar_title|e }}{%- else -%}{{ project|e }}{%- endif -%}</a>
       </div>
     </div>
-
-    <div class="navbar-collapse collapse navbar-ex1-collapse">
-
-      <ul class="nav navbar-nav navbar-right">
+      <div id="links" style="float:right; width:22%">
+      <ul class="nav navbar-nav navbar-right" >
 
         <li class="divider-vertical"></li>
 
         <!-- social media dropdown -->
         <li class="dropdown">
           <a class="dropdown-toggle" href="#" data-toggle="dropdown">
-            <i class="glyphicon glyphicon-share-alt" style="opacity: 0.9"></i>
+            <i class="glyphicon glyphicon-globe" style="opacity: 0.9"></i>
           </a>
           <ul class="dropdown-menu social-menu">
               <li>
@@ -113,8 +104,6 @@
             {% endif %}
             <li><a href='/{{appname}}/static/{{course_id}}/genindex.html'>Book Index</a></li>
             <li class="divider"></li>
-            <li id="scratch_ac_link"><a href="javascript:ACFactory.toggleScratchActivecode()">Scratch ActiveCode</a></li>
-            <li class="divider"></li>
             <li style="width: 240px;">
               <form class="navbar-search" style="margin:10px;" action="{{ pathto('search') }}" method="get">
                 <div class="input-group">
@@ -144,6 +133,8 @@
           <ul class="dropdown-menu user-menu">
             <li><span class='loggedinuser'></span></li>
             <li class="divider"></li>
+            <li><a href='{{course_url}}/{{appname}}/assignments/practice'>Practice</a></li>
+            <li class="divider"></li>
             <li><a href='/{{appname}}/default/courses'>Change Course</a></li>
             <li class="divider"></li>
             <li><a href='{{course_url}}/{{appname}}/mygroup/initiateGroup' id="joinGroupLink">Join a Study Group</a></li>
@@ -162,6 +153,14 @@
         </li>
         <!-- end user account dropdown -->
         {% endif %}
+        <li class="divider-vertical"></li>
+        <!-- <li id="scratch_ac_link"><a href="javascript:ACFactory.toggleScratchActivecode()">Scratch ActiveCode</a></li> -->
+
+        <!-- <li class="dropdown">             -->
+          <li id="scratch_ac_link" class="dropdown"><a href="javascript:ACFactory.toggleScratchActivecode()">
+              <i class="glyphicon glyphicon-pencil" style="opacity:0.9;"></i></a></li>
+        <!-- </li> -->
+
         <li class="divider-vertical"></li>
 
         <!-- help menu dropdown -->
@@ -182,6 +181,7 @@
         <li class="divider-vertical"></li>
 
       </ul>
+      </div>
 
       <ul class="nav navbar-nav">
         <li class="divider-vertical"></li>
@@ -196,7 +196,7 @@
           <li>{% include "sourcelink.html" %}</li>
         {% endif %}
       </ul>
-
+      {% include "progress.html" %}
     </div>
   </div>
 </div>
@@ -221,7 +221,13 @@
   eBookConfig.useRunestoneServices = {{ use_services }};
   eBookConfig.python3 = {{ python3 }};
   eBookConfig.basecourse = '{{ basecourse }}';
+  eBookConfig.acDefaultLanguage = '{{ default_ac_lang }}' ? '{{ default_ac_lang }}' : 'python'
   eBookConfig.runestone_version = '{{ runestone_version }}';
+  eBookConfig.jobehost = '{{jobe_server}}';
+  eBookConfig.proxyuri_runs = '{{proxy_uri_runs}}';
+  eBookConfig.proxyuri_files = '{{proxy_uri_files}}';
+  eBookConfig.downloadsEnabled = {{downloads_enabled}};
+  eBookConfig.enable_chatcodes = {{enable_chatcodes}} ? {{ enable_chatcodes }} : false;
 </script>
 
 <div id="fb-root"></div>
@@ -234,7 +240,6 @@
     fjs.parentNode.insertBefore(js, fjs);
   }(document, 'script', 'facebook-jssdk'));
 </script>
-
 
 {% endblock %}
 

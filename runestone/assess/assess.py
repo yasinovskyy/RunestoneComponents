@@ -17,7 +17,7 @@ __author__ = 'bmiller'
 
 from docutils import nodes
 from docutils.parsers.rst import directives
-from docutils.parsers.rst import Directive
+from runestone.common.runestonedirective import RunestoneDirective, RunestoneIdDirective
 from .assessbase import Assessment
 from .multiplechoice import *
 from .timedassessment import *
@@ -32,6 +32,8 @@ def setup(app):
     app.add_directive('qnum', QuestionNumber)
     app.add_directive('timed', TimedDirective)
 
+    app.add_config_value('mchoice_div_class', 'runestone alert alert-warning', 'html')
+
     #app.add_javascript('assess.js')
     app.add_javascript('mchoice.js')
     app.add_javascript('timedmc.js')
@@ -45,9 +47,10 @@ def setup(app):
     app.add_node(FeedbackBulletList, html=(visit_feedback_bullet_node, depart_feedback_bullet_node))
     app.add_node(FeedbackListItem, html=(visit_feedback_list_item, depart_feedback_list_item))
 
+    
 
 
-class AddButton(Directive):
+class AddButton(RunestoneIdDirective):
     required_arguments = 1
     optional_arguments = 1
     final_argument_whitespace = True
@@ -61,6 +64,7 @@ class AddButton(Directive):
 
             ...
             """
+        super(AddButton, self).run()
 
         TEMPLATE_START = '''
             <div id="%(divid)s" class="alert alert-warning">
@@ -73,16 +77,16 @@ class AddButton(Directive):
             </div>
             '''
 
-        self.options['divid'] = self.arguments[0]
-
         res = ""
         res = TEMPLATE_START % self.options
 
         res += TEMPLATE_END % self.options
-        return [nodes.raw('', res, format='html')]
+        rawnode = nodes.raw(self.block_text, res, format='html')
+        rawnode.source, rawnode.line = self.state_machine.get_source_and_line(self.lineno)
+        return [rawnode]
 
 
-class QuestionNumber(Directive):
+class QuestionNumber(RunestoneDirective):
     """Set Parameters for Question Numbering
 .. qnum::
    'prefix': character prefix before the number

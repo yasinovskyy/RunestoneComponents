@@ -18,7 +18,7 @@ __author__ = 'isaiahmayerchak'
 
 from docutils import nodes
 from docutils.parsers.rst import directives
-from docutils.parsers.rst import Directive
+from runestone.common.runestonedirective import RunestoneIdDirective, RunestoneNode
 from runestone.server.componentdb import addQuestionToDB
 
 
@@ -29,10 +29,11 @@ def setup(app):
     app.add_stylesheet('poll.css')
     app.add_node(PollNode, html=(visit_poll_node, depart_poll_node))
 
+    app.add_config_value('poll_div_class', 'alert alert-warning', 'html')
 
 
 TEMPLATE_START = """
-<ul data-component="poll" id=%(divid)s %(comment)s>%(question)s
+<ul data-component="poll" id=%(divid)s %(comment)s class='%(divclass)s'>%(question)s
 """
 
 TEMPLATE_OPTION = """
@@ -41,14 +42,14 @@ TEMPLATE_OPTION = """
 
 TEMPLATE_END = """</ul>"""
 
-class PollNode(nodes.General, nodes.Element):
-    def __init__(self,content):
+class PollNode(nodes.General, nodes.Element, RunestoneNode):
+    def __init__(self,content, **kwargs):
         """
         Arguments:
         - `self`:
         - `content`:
         """
-        super(PollNode,self).__init__()
+        super(PollNode,self).__init__(**kwargs)
         self.poll_content = content
 
 # self for these functions is an instance of the writer class.  For example
@@ -80,7 +81,7 @@ def depart_poll_node(self,node):
     pass
 
 
-class Poll(Directive):
+class Poll(RunestoneIdDirective):
     """
 .. poll:: identifier
     :scale: Mode 1--Implements the "On a scale of 1 to x" type method of poll--x is provided by author
@@ -88,6 +89,12 @@ class Poll(Directive):
     :option_1: Mode 2--Implements the "Choose one of these options" type method of poll.
     :option_2: Option 2
     :option_3: Option 3    ...etc...(Up to 10 options in mode 2)
+
+
+
+config values (conf.py): 
+
+- poll_div_class - custom CSS class of the component's outermost div
     """
     required_arguments = 1
     optional_arguments = 0
@@ -120,9 +127,9 @@ class Poll(Directive):
                 :option_3: Option 3
                 ...etc...(Up to 10 options in mode 2)
         """
+        super(Poll, self).run()
         addQuestionToDB(self)
 
-        self.options['divid'] = self.arguments[0]
         if self.content:
             source = "\n".join(self.content)
         else:
@@ -136,5 +143,9 @@ class Poll(Directive):
         else:
             self.options["comment"] = ""
 
+        env = self.state.document.settings.env
+        self.options['divclass'] = env.config.poll_div_class
 
-        return [PollNode(self.options)]
+        poll_node = PollNode(self.options, rawsource=self.block_text)
+        poll_node.source, poll_node.line = self.state_machine.get_source_and_line(self.lineno)
+        return [poll_node]
